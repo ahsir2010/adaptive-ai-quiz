@@ -8,12 +8,16 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 st.title("🎮 Adaptive AI Quiz Game (Offline v2)")
 
+st.sidebar.title("🏆 Leaderboard")
+st.sidebar.write(f"High Score: {st.session_state.high_score}")
+
 # --- Session State Initialization ---
 if "level" not in st.session_state:
     st.session_state.level = 1
 
 if "xp" not in st.session_state:
     st.session_state.xp = 0
+\
 
 if "streak" not in st.session_state:
     st.session_state.streak = 0
@@ -54,7 +58,19 @@ if "question_id" not in st.session_state:
 if "answer_submitted" not in st.session_state:
     st.session_state.answer_submitted = False
 
+if "high_score" not in st.session_state:
+    st.session_state.high_score = 0
+
 st.divider()
+
+def difficulty_badge(level):
+    if level == 1:
+        return "🟢 Easy"
+    elif level == 2:
+        return "🟡 Medium"
+    else:
+        return "🔴 Hard"
+
 def generate_question(topic, level):
 
     difficulty_map = {
@@ -107,11 +123,26 @@ def generate_question(topic, level):
     return data
 
 # --- UI ---
+st.sidebar.title("🏆 Leaderboard")
+st.sidebar.write(f"High Score: {st.session_state.high_score}")
+
 topic = st.text_input("Enter topic:")
 
-st.write(f"Level: {st.session_state.level} / 3")
-st.write(f"XP: {st.session_state.xp}")
-st.write(f"🔥 Streak: {st.session_state.streak}")
+st.markdown(f"### Difficulty: {difficulty_badge(st.session_state.level)}")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("XP", st.session_state.xp)
+
+with col2:
+    st.metric("Streak 🔥", st.session_state.streak)
+
+with col3:
+    if st.session_state.total_questions > 0:
+        accuracy = st.session_state.total_correct / st.session_state.total_questions
+        st.metric("Accuracy", f"{round(accuracy * 100, 1)}%")
+
 st.write(f"Questions this level: {st.session_state.questions_answered_this_level}/3")
 
 xp_progress = min(st.session_state.xp / 200, 1.0)
@@ -148,7 +179,8 @@ if topic:
         "Choose your answer:",
         st.session_state.round_options,
         key=radio_key,
-        index=None
+        index=None,
+        disabled=st.session_state.answer_submitted
     )
 
 if st.button("Submit Answer") and not st.session_state.answer_submitted:
@@ -163,6 +195,10 @@ if st.button("Submit Answer") and not st.session_state.answer_submitted:
         if selected == st.session_state.round_answer:
             st.session_state.last_result = "correct"
             st.session_state.xp += 10 * st.session_state.level
+
+            if st.session_state.xp > st.session_state.high_score:
+                st.session_state.high_score = st.session_state.xp
+
             st.session_state.streak += 1
             st.session_state.correct_count += 1
             st.session_state.total_correct += 1
