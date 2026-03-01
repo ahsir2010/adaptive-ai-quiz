@@ -8,9 +8,6 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 st.title("🎮 Adaptive AI Quiz Game (Offline v2)")
 
-st.sidebar.title("🏆 Leaderboard")
-st.sidebar.write(f"High Score: {st.session_state.high_score}")
-
 # --- Session State Initialization ---
 if "level" not in st.session_state:
     st.session_state.level = 1
