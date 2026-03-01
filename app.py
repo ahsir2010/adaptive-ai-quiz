@@ -17,7 +17,9 @@ if "level" not in st.session_state:
 
 if "xp" not in st.session_state:
     st.session_state.xp = 0
-\
+
+if "high_score" not in st.session_state:
+    st.session_state.high_score = 0
 
 if "streak" not in st.session_state:
     st.session_state.streak = 0
@@ -57,9 +59,6 @@ if "question_id" not in st.session_state:
 
 if "answer_submitted" not in st.session_state:
     st.session_state.answer_submitted = False
-
-if "high_score" not in st.session_state:
-    st.session_state.high_score = 0
 
 st.divider()
 
