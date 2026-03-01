@@ -214,12 +214,14 @@ if topic:
 
         options = data["options"]
 
-        labeled_options = [
-            f"A. {options[0]}",
-            f"B. {options[1]}",
-            f"C. {options[2]}",
-            f"D. {options[3]}"
-        ]
+        # This only adds the prefix if the AI didn't already include it
+        prefixes = ["A", "B", "C", "D"]
+        labeled_options = []
+        for i, opt in enumerate(options):
+            if not opt.strip().startswith(f"{prefixes[i]}."):
+                labeled_options.append(f"{prefixes[i]}. {opt}")
+            else:
+                labeled_options.append(opt)
 
         st.session_state.round_options = labeled_options
         st.session_state.round_answer = next(
