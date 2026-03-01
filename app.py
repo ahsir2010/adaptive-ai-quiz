@@ -213,6 +213,16 @@ if topic:
         st.session_state.round_question = data["question"]
 
         options = data["options"]
+
+        # This only adds the prefix if the AI didn't already include it
+        prefixes = ["A", "B", "C", "D"]
+        labeled_options = []
+        for i, opt in enumerate(options):
+            if not opt.strip().startswith(f"{prefixes[i]}."):
+                labeled_options.append(f"{prefixes[i]}. {opt}")
+            else:
+                labeled_options.append(opt)
+
         st.session_state.round_options = labeled_options
         st.session_state.round_answer = next(
             opt for opt in labeled_options if data["answer"] in opt
