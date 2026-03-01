@@ -271,12 +271,32 @@ if st.button("Submit Answer") and not st.session_state.answer_submitted:
 
     if selected is None:
         st.warning("Please select an answer before submitting.")
+    elif elapsed > 15:
+        # Check if they beat the clock first
+        st.warning("Too slow! The time expired.")
+        st.session_state.answer_submitted = True
+        st.session_state.last_result = "wrong"
+        st.session_state.streak = 0
+        st.session_state.wrong_count += 1
+        st.session_state.questions_answered_this_level += 1
+        st.session_state.total_questions += 1
+        st.rerun()
     else:
+        # If they selected an answer AND beat the clock, grade it!
         st.session_state.answer_submitted = True
 
         if selected == st.session_state.round_answer:
             st.session_state.last_result = "correct"
             st.session_state.xp += 10 * st.session_state.level
+            
+            # High score tracking
+            if st.session_state.xp > st.session_state.high_score:
+                st.session_state.high_score = st.session_state.xp
+            
+            # DB save
+            c.execute("INSERT INTO scores (score) VALUES (?)", (st.session_state.xp,))
+            conn.commit()
+            
             st.session_state.streak += 1
             st.session_state.correct_count += 1
             st.session_state.total_correct += 1
@@ -285,21 +305,6 @@ if st.button("Submit Answer") and not st.session_state.answer_submitted:
             st.session_state.streak = 0
             st.session_state.wrong_count += 1
 
-        if elapsed > 15:
-            st.warning("Too slow! The time expired.")
-            st.session_state.answer_submitted = True
-            st.session_state.last_result = "wrong"
-            st.session_state.streak = 0
-            st.session_state.wrong_count += 1
-            st.session_state.questions_answered_this_level += 1
-            st.session_state.total_questions += 1
-            st.rerun()
-
-        elif selected is None:
-            st.warning("Please select an answer before submitting.")
-        else:
-            st.session_state.answer_submitted = True
-            
         st.session_state.questions_answered_this_level += 1
         st.session_state.total_questions += 1
 
