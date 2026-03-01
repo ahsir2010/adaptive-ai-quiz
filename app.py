@@ -231,15 +231,28 @@ if topic:
 
     st.subheader(st.session_state.round_question)
 
-    if st.session_state.start_time:
+    if st.session_state.start_time and not st.session_state.answer_submitted:
+        # 1. Force the app to tick every 1000ms (1 second)
+        st_autorefresh(interval=1000, key=f"timer_{st.session_state.question_id}")
+        
         elapsed = int(time.time() - st.session_state.start_time)
         remaining = max(15 - elapsed, 0)
         st.write(f"⏱ Time Remaining: {remaining}s")
 
-        if remaining == 0 and not st.session_state.answer_submitted:
+        # 2. Auto-fail them if the clock hits 0
+        if remaining == 0:
             st.warning("Time's up!")
             st.session_state.answer_submitted = True
             st.session_state.last_result = "wrong"
+            
+            # Apply penalties
+            st.session_state.streak = 0
+            st.session_state.wrong_count += 1
+            st.session_state.questions_answered_this_level += 1
+            st.session_state.total_questions += 1
+            
+            # Force a rerun to immediately lock the radio buttons and show the explanation
+            st.rerun()
 
     radio_key = f"selected_option_{st.session_state.question_id}"
 
@@ -254,6 +267,7 @@ if topic:
 if st.button("Submit Answer") and not st.session_state.answer_submitted:
 
     selected = st.session_state.get(radio_key)
+    elapsed = int(time.time() - st.session_state.start_time)
 
     if selected is None:
         st.warning("Please select an answer before submitting.")
@@ -263,13 +277,6 @@ if st.button("Submit Answer") and not st.session_state.answer_submitted:
         if selected == st.session_state.round_answer:
             st.session_state.last_result = "correct"
             st.session_state.xp += 10 * st.session_state.level
-
-            if st.session_state.xp > st.session_state.high_score:
-                st.session_state.high_score = st.session_state.xp
-
-            c.execute("INSERT INTO scores (score) VALUES (?)", (st.session_state.xp,))
-            conn.commit()
-
             st.session_state.streak += 1
             st.session_state.correct_count += 1
             st.session_state.total_correct += 1
@@ -278,6 +285,21 @@ if st.button("Submit Answer") and not st.session_state.answer_submitted:
             st.session_state.streak = 0
             st.session_state.wrong_count += 1
 
+        if elapsed > 15:
+            st.warning("Too slow! The time expired.")
+            st.session_state.answer_submitted = True
+            st.session_state.last_result = "wrong"
+            st.session_state.streak = 0
+            st.session_state.wrong_count += 1
+            st.session_state.questions_answered_this_level += 1
+            st.session_state.total_questions += 1
+            st.rerun()
+
+        elif selected is None:
+            st.warning("Please select an answer before submitting.")
+        else:
+            st.session_state.answer_submitted = True
+            
         st.session_state.questions_answered_this_level += 1
         st.session_state.total_questions += 1
 
