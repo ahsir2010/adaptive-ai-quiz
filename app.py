@@ -1,14 +1,31 @@
+import time
 import streamlit as st
 import random
 from groq import Groq
 import os
 import json
 
+import sqlite3
+
+conn = sqlite3.connect("leaderboard.db", check_same_thread=False)
+c = conn.cursor()
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    score INTEGER
+)
+""")
+conn.commit()
+
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 st.title("🎮 Adaptive AI Quiz Game (Offline v2)")
 
 # --- Session State Initialization ---
+if "start_time" not in st.session_state:
+    st.session_state.start_time = None
+
 if "level" not in st.session_state:
     st.session_state.level = 1
 
@@ -56,6 +73,29 @@ if "total_questions" not in st.session_state:
 
 if "question_id" not in st.session_state:
     st.session_state.question_id = 0
+
+st.markdown("""
+<style>
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+h3 {
+    margin-bottom: 0.5rem;
+}
+
+div[data-testid="stMetric"] {
+    background-color: #111827;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+div[data-testid="stProgress"] > div > div > div {
+    background-color: #22c55e;
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.divider()
 
@@ -120,7 +160,14 @@ def generate_question(topic, level):
 
 # --- UI ---
 st.sidebar.title("🏆 Leaderboard")
-st.sidebar.write(f"High Score: {st.session_state.high_score}")
+
+c.execute("SELECT MAX(score) FROM scores")
+top_score = c.fetchone()[0]
+
+if top_score is None:
+    top_score = 0
+
+st.sidebar.write(f"Global High Score: {top_score}")
 
 topic = st.text_input("Enter topic:")
 
@@ -163,11 +210,36 @@ if topic:
         data = generate_question(topic, st.session_state.level)
 
         st.session_state.round_question = data["question"]
-        st.session_state.round_options = data["options"]
+
+        options = data["options"]
+
+        labeled_options = [
+            f"A. {options[0]}",
+            f"B. {options[1]}",
+            f"C. {options[2]}",
+            f"D. {options[3]}"
+        ]
+
+        st.session_state.round_options = labeled_options
+        st.session_state.round_answer = next(
+            opt for opt in labeled_options if data["answer"] in opt
+        )
+
         st.session_state.round_answer = data["answer"]
         st.session_state.round_explanation = data["explanation"]
+        st.session_state.start_time = time.time()
 
     st.subheader(st.session_state.round_question)
+
+    if st.session_state.start_time:
+        elapsed = int(time.time() - st.session_state.start_time)
+        remaining = max(15 - elapsed, 0)
+        st.write(f"⏱ Time Remaining: {remaining}s")
+
+        if remaining == 0 and not st.session_state.answer_submitted:
+            st.warning("Time's up!")
+            st.session_state.answer_submitted = True
+            st.session_state.last_result = "wrong"
 
     radio_key = f"selected_option_{st.session_state.question_id}"
 
@@ -194,6 +266,9 @@ if st.button("Submit Answer") and not st.session_state.answer_submitted:
 
             if st.session_state.xp > st.session_state.high_score:
                 st.session_state.high_score = st.session_state.xp
+
+            c.execute("INSERT INTO scores (score) VALUES (?)", (st.session_state.xp,))
+            conn.commit()
 
             st.session_state.streak += 1
             st.session_state.correct_count += 1
@@ -237,5 +312,7 @@ if st.session_state.answer_submitted:
         st.session_state.round_question = None
         st.session_state.answer_submitted = False
         st.session_state.question_id += 1
+
+        st.session_state.start_time = None
 
         st.rerun()
