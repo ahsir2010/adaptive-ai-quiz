@@ -4,6 +4,7 @@ import random
 from groq import Groq
 import os
 import json
+from streamlit_autorefresh import st_autorefresh
 
 import sqlite3
 
