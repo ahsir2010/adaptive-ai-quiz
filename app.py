@@ -24,6 +24,9 @@ if "high_score" not in st.session_state:
 if "streak" not in st.session_state:
     st.session_state.streak = 0
 
+if "answer_submitted" not in st.session_state:
+    st.session_state.answer_submitted = False
+
 if "correct_count" not in st.session_state:
     st.session_state.correct_count = 0
 
@@ -56,9 +59,6 @@ if "total_questions" not in st.session_state:
 
 if "question_id" not in st.session_state:
     st.session_state.question_id = 0
-
-if "answer_submitted" not in st.session_state:
-    st.session_state.answer_submitted = False
 
 st.divider()
 
